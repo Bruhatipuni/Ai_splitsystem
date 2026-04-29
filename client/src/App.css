@@ -1,0 +1,96 @@
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #020617;
+  color: white;
+}
+
+.app {
+  max-width: 600px;
+  margin: auto;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+}
+
+/* CARD */
+.card {
+  background: #0f172a;
+  padding: 20px;
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+/* INPUT */
+input {
+  display: block;
+  width: 100%;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #1e293b;
+  color: white;
+}
+
+/* BUTTON */
+button {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(90deg, #06b6d4, #3b82f6);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+}
+
+/* SUMMARY */
+.summary {
+  display: flex;
+  gap: 10px;
+}
+
+.box {
+  flex: 1;
+  background: #1e293b;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.red {
+  color: #f87171;
+}
+
+.green {
+  color: #4ade80;
+}
+
+/* EXPENSE ITEM */
+.expense-item {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 0;
+}
+
+/* SETTLEMENT */
+.settlement-card {
+  display: flex;
+  gap: 10px;
+  background: #1e293b;
+  padding: 10px;
+  border-radius: 10px;
+  margin: 10px 0;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  background: #06b6d4;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
