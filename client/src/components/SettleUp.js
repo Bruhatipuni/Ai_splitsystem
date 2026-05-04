@@ -18,7 +18,7 @@ function SettleUp({ settlements, user, groupId, refresh }) {
         groupId: groupId,
       };
 
-      await axios.post("http://localhost:5000/api/expenses/add", payload);
+      await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/expenses/add`, payload);
       alert("Debt settled! 🎉");
       if (refresh) refresh();
     } catch (err) {

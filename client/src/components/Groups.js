@@ -9,7 +9,7 @@ function Groups({ currentGroupId, setGroupId, user }) {
     const fetchGroups = async () => {
       if (!user?.name) return;
       try {
-        const res = await axios.get(`http://localhost:5000/api/expenses/user/${user.name}/groups`);
+        const res = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/expenses/user/${user.name}/groups`);
         setMyGroups(res.data);
       } catch (err) {
         console.error("Failed to fetch groups", err);

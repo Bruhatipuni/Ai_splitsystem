@@ -41,8 +41,11 @@ router.get("/user/:username", async (req, res) => {
     const enhancedGroups = await Promise.all(
       groups.map(async (group) => {
         const expenses = await Expense.find({ groupId: group.name });
-        const totalExpenses = expenses.length;
-        const totalAmount = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+        
+        // Exclude settlements from total expenses and total amount
+        const nonSettlementExpenses = expenses.filter(exp => exp.title !== "Settlement Payment");
+        const totalExpenses = nonSettlementExpenses.length;
+        const totalAmount = nonSettlementExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
         // Simple mock of 'You are owed' vs 'You owe'
         let youAreOwed = 0;

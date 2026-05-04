@@ -37,7 +37,7 @@ function CreateGroupModal({ isOpen, onClose, user, onGroupCreated }) {
     }
 
     try {
-      await axios.post("http://localhost:5000/api/groups/create", {
+      await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/groups/create`, {
         name: name.trim(),
         emoji,
         members: finalMembers,

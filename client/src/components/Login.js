@@ -11,7 +11,7 @@ function Login({ setUser }) {
   const handleAuth = async () => {
     try {
       if (isRegister) {
-        await axios.post("http://localhost:5000/api/auth/register", {
+        await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/register`, {
           name,
           email,
           password
@@ -20,7 +20,7 @@ function Login({ setUser }) {
         alert("Registered successfully! Now login.");
         setIsRegister(false);
       } else {
-        const res = await axios.post("http://localhost:5000/api/auth/login", {
+        const res = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/login`, {
           email,
           password
         });

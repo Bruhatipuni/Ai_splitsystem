@@ -81,12 +81,14 @@ router.get("/settlements/:groupId", async (req, res) => {
   try {
     const expenses = await Expense.find({ groupId: req.params.groupId });
     
-    // Calculate net balances
+    // Calculate net balances (case-insensitive)
     const balances = {};
     expenses.forEach(exp => {
-      balances[exp.paidBy] = (balances[exp.paidBy] || 0) + exp.amount;
+      const paidBy = exp.paidBy.toLowerCase();
+      balances[paidBy] = (balances[paidBy] || 0) + exp.amount;
       exp.splitAmong.forEach(split => {
-        balances[split.name] = (balances[split.name] || 0) - split.amount;
+        const splitName = split.name.toLowerCase();
+        balances[splitName] = (balances[splitName] || 0) - split.amount;
       });
     });
 

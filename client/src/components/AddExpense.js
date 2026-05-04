@@ -31,7 +31,7 @@ function AddExpense({ onAdd, groupId }) {
       console.log("Sending:", payload); // debug
 
       const res = await axios.post(
-        "http://localhost:5000/api/expenses/add",
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/expenses/add`,
         payload
       );
 

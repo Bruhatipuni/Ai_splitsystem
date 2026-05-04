@@ -22,15 +22,15 @@ function App() {
   const fetchData = useCallback(async () => {
     try {
       if (user?.name) {
-        const res = await axios.get(`http://localhost:5000/api/groups/user/${user.name}`);
+        const res = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/groups/user/${user.name}`);
         setMyGroups(res.data);
       }
 
       if (groupId) {
-        const exp = await axios.get(`http://localhost:5000/api/expenses/${groupId}`);
+        const exp = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/expenses/${groupId}`);
         setExpenses(exp.data);
 
-        const setl = await axios.get(`http://localhost:5000/api/expenses/settlements/${groupId}`);
+        const setl = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/expenses/settlements/${groupId}`);
         setSettlements(setl.data);
       }
     } catch (err) {
@@ -163,13 +163,22 @@ function App() {
               const members = currentGroup?.members || [];
               const totalAmount = currentGroup?.totalAmount || 0;
               
-              // Compute balances locally
+              // Compute balances locally (case-insensitive)
               const balances = {};
-              members.forEach(m => balances[m] = 0);
+              const nameMap = {};
+              members.forEach(m => {
+                balances[m.toLowerCase()] = 0;
+                nameMap[m.toLowerCase()] = m;
+              });
               expenses.forEach(e => {
-                balances[e.paidBy] = (balances[e.paidBy] || 0) + e.amount;
+                const paidBy = e.paidBy.toLowerCase();
+                if (!nameMap[paidBy]) nameMap[paidBy] = e.paidBy;
+                balances[paidBy] = (balances[paidBy] || 0) + e.amount;
+                
                 e.splitAmong.forEach(s => {
-                  balances[s.name] = (balances[s.name] || 0) - s.amount;
+                  const splitName = s.name.toLowerCase();
+                  if (!nameMap[splitName]) nameMap[splitName] = s.name;
+                  balances[splitName] = (balances[splitName] || 0) - s.amount;
                 });
               });
 
@@ -191,13 +200,14 @@ function App() {
                     {/* BALANCES COLUMN */}
                     <div className="balances-card">
                       <div className="card-header-title">Balances</div>
-                      {members.map(m => {
-                        const bal = balances[m] || 0;
+                      {Object.keys(balances).map(mKey => {
+                        const bal = balances[mKey] || 0;
+                        const m = nameMap[mKey];
                         const isPositive = bal > 0.01;
                         const isNegative = bal < -0.01;
                         return (
-                          <div className="balance-row" key={m}>
-                            <span>{m === user?.name ? "You" : m}</span>
+                          <div className="balance-row" key={mKey}>
+                            <span>{mKey === user?.name?.toLowerCase() ? "You" : m}</span>
                             <span style={{ 
                               color: isPositive ? '#10b981' : isNegative ? '#ef4444' : '#64748b' 
                             }}>
@@ -218,7 +228,7 @@ function App() {
                           const handleSettlePayment = async () => {
                             if (window.confirm(`Mark ₹${s.amount.toFixed(2)} payment from ${s.from} to ${s.to} as settled?`)) {
                               try {
-                                await axios.post("http://localhost:5000/api/expenses/add", {
+                                await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/expenses/add`, {
                                   groupId: groupId,
                                   title: "Settlement Payment",
                                   amount: s.amount,
@@ -266,22 +276,37 @@ function App() {
                   </div>
 
                   <div className="expenses-list">
-                    {expenses.length === 0 ? (
+                    {expenses.filter(e => e.title !== "Settlement Payment" || (e.splitAmong[0] && e.paidBy.toLowerCase() !== e.splitAmong[0].name.toLowerCase())).length === 0 ? (
                       <p style={{ color: '#94a3b8', textAlign: 'center', padding: '40px', background: 'white', borderRadius: '16px', border: '1px dashed #e2e8f0' }}>No expenses yet</p>
                     ) : (
-                      expenses.map((e) => (
-                        <div key={e._id} className="expense-item">
-                          <div className="expense-item-left">
-                            <div className="expense-cat-icon">
-                              {e.category === "Food" ? "🍔" : e.category === "Lodging" ? "🏠" : e.category === "Transport" ? "🚗" : "💸"}
+                      expenses
+                        .filter(e => e.title !== "Settlement Payment" || (e.splitAmong[0] && e.paidBy.toLowerCase() !== e.splitAmong[0].name.toLowerCase()))
+                        .map((e) => (
+                          e.title === "Settlement Payment" ? (
+                            <div key={e._id} className="expense-item" style={{ background: '#f8fafc' }}>
+                              <div className="expense-item-left">
+                                <div className="expense-cat-icon" style={{ background: '#e2e8f0' }}>✅</div>
+                                <div className="expense-item-info">
+                                  <h4>Payment</h4>
+                                  <p>{e.paidBy.toLowerCase() === user?.name?.toLowerCase() ? "You" : e.paidBy} paid {e.splitAmong[0]?.name.toLowerCase() === user?.name?.toLowerCase() ? "You" : e.splitAmong[0]?.name}</p>
+                                </div>
+                              </div>
+                              <div className="expense-item-amount" style={{ color: '#10b981' }}>₹{e.amount.toFixed(2)}</div>
                             </div>
-                            <div className="expense-item-info">
-                              <h4>{e.title}</h4>
-                              <p>{e.paidBy === user?.name ? "You" : e.paidBy} paid · split {e.splitAmong.length} ways</p>
+                          ) : (
+                            <div key={e._id} className="expense-item">
+                              <div className="expense-item-left">
+                                <div className="expense-cat-icon">
+                                  {e.category === "Food" ? "🍔" : e.category === "Lodging" ? "🏠" : e.category === "Transport" ? "🚗" : "💸"}
+                                </div>
+                                <div className="expense-item-info">
+                                  <h4>{e.title}</h4>
+                                  <p>{e.paidBy.toLowerCase() === user?.name?.toLowerCase() ? "You" : e.paidBy} paid · split {e.splitAmong.length} ways</p>
+                                </div>
+                              </div>
+                              <div className="expense-item-amount">₹{e.amount.toFixed(2)}</div>
                             </div>
-                          </div>
-                          <div className="expense-item-amount">₹{e.amount.toFixed(2)}</div>
-                        </div>
+                          )
                       ))
                     )}
                   </div>
