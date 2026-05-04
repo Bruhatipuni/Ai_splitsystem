@@ -26,13 +26,19 @@ function CreateGroupModal({ isOpen, onClose, user, onGroupCreated }) {
       return;
     }
 
-    // Process members: replace 'You' with actual username, filter out empties
-    const finalMembers = members
-      .map(m => (m.toLowerCase() === 'you' ? user.name : m.trim()))
-      .filter(m => m.length > 0);
+    // Process members: replace 'You' with actual username, filter out empties, and remove duplicates (case-insensitive)
+    const uniqueMembersMap = new Map();
+    members.forEach(m => {
+      let name = m.toLowerCase() === 'you' ? user.name : m.trim();
+      if (name.length > 0) {
+        uniqueMembersMap.set(name.toLowerCase(), name);
+      }
+    });
+
+    const finalMembers = Array.from(uniqueMembersMap.values());
 
     // Ensure user is always in the group
-    if (!finalMembers.includes(user.name)) {
+    if (!uniqueMembersMap.has(user.name.toLowerCase())) {
       finalMembers.push(user.name);
     }
 
