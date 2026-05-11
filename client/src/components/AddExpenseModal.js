@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 function AddExpenseModal({ isOpen, onClose, user, groupId, members, onExpenseAdded }) {
@@ -9,6 +9,9 @@ function AddExpenseModal({ isOpen, onClose, user, groupId, members, onExpenseAdd
   
   // Array of member names who are participating in the split
   const [splitBetween, setSplitBetween] = useState([]);
+
+  const [isScanning, setIsScanning] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -29,6 +32,48 @@ function AddExpenseModal({ isOpen, onClose, user, groupId, members, onExpenseAdd
       setSplitBetween(splitBetween.filter(m => m !== mName));
     } else {
       setSplitBetween([...splitBetween, mName]);
+    }
+  };
+
+  const handleScanClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Data = reader.result;
+        
+        try {
+          const res = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/expenses/scan`, {
+            imageBase64: base64Data,
+            mimeType: file.type
+          });
+          
+          if (res.data) {
+            if (res.data.title) setTitle(res.data.title);
+            if (res.data.amount) setAmount(res.data.amount.toString());
+          }
+        } catch (err) {
+          console.error("Scan API error", err);
+          alert("Failed to scan receipt. " + (err.response?.data?.msg || ""));
+        } finally {
+          setIsScanning(false);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("File reading error", err);
+      setIsScanning(false);
     }
   };
 
@@ -63,7 +108,36 @@ function AddExpenseModal({ isOpen, onClose, user, groupId, members, onExpenseAdd
     <div className="modal-overlay">
       <div className="modal-content">
         <button className="modal-close" onClick={onClose}>&times;</button>
-        <h2 style={{ marginBottom: '24px', fontSize: '1.5rem', color: '#0f172a' }}>Add expense</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#0f172a' }}>Add expense</h2>
+          <button 
+            type="button" 
+            onClick={handleScanClick}
+            disabled={isScanning}
+            style={{ 
+              background: '#e0e7ff', 
+              color: '#4f46e5', 
+              border: 'none', 
+              padding: '8px 16px', 
+              borderRadius: '8px', 
+              cursor: isScanning ? 'not-allowed' : 'pointer',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            {isScanning ? 'Scanning...' : '📷 Scan Receipt'}
+          </button>
+          <input 
+            type="file" 
+            accept="image/*" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            style={{ display: 'none' }} 
+            capture="environment"
+          />
+        </div>
 
         <div className="form-group">
           <label style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: '600' }}>What was it for?</label>

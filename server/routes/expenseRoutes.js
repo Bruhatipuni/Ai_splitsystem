@@ -1,6 +1,87 @@
 const express = require("express");
 const router = express.Router();
 const Expense = require("../models/Expense");
+const { GoogleGenAI } = require("@google/genai");
+
+// ✅ SCAN EXPENSE BILL
+router.post("/scan", async (req, res) => {
+  try {
+    const { imageBase64, mimeType } = req.body;
+    if (!imageBase64) {
+      return res.status(400).json({ msg: "Image data is required" });
+    }
+
+    const hasGemini = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here';
+    const hasOpenAI = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here';
+
+    if (!hasGemini && !hasOpenAI) {
+      return res.status(503).json({ msg: "No AI API key is configured. Please add GEMINI_API_KEY or OPENAI_API_KEY to .env" });
+    }
+
+    // Ensure we only have the raw base64 data, removing the prefix if present
+    const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+    const prompt = `Analyze this receipt/bill. Extract the name of the store or a reasonable title for the expense, and the total amount. Return ONLY a valid JSON object with two keys: "title" (string) and "amount" (number). Do not include markdown formatting or any other text. Example: {"title": "Starbucks", "amount": 15.50}`;
+
+    let jsonStr = "";
+
+    if (hasGemini) {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          {
+            inlineData: {
+              data: base64Data,
+              mimeType: mimeType || "image/jpeg"
+            }
+          },
+          prompt
+        ],
+      });
+      jsonStr = response.text.trim();
+    } else if (hasOpenAI) {
+      const OpenAI = require("openai");
+      const isGroq = process.env.OPENAI_API_KEY.startsWith("gsk_");
+      
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+        baseURL: isGroq ? "https://api.groq.com/openai/v1" : "https://api.openai.com/v1",
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: isGroq ? "llama-3.2-90b-vision-preview" : "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType || "image/jpeg"};base64,${base64Data}`,
+                },
+              },
+            ],
+          },
+        ],
+      });
+      jsonStr = completion.choices[0].message.content.trim();
+    }
+    // the response text should be JSON, but might be enclosed in markdown like ```json ... ```
+    if (jsonStr.startsWith("```json")) {
+        jsonStr = jsonStr.replace(/^```json/, "").replace(/```$/, "").trim();
+    } else if (jsonStr.startsWith("```")) {
+        jsonStr = jsonStr.replace(/^```/, "").replace(/```$/, "").trim();
+    }
+
+    const parsed = JSON.parse(jsonStr);
+    return res.json(parsed);
+
+  } catch (err) {
+    console.error("Scan Error:", err);
+    res.status(500).json({ msg: "Failed to scan image" });
+  }
+});
 
 // ✅ ADD EXPENSE
 router.post("/add", async (req, res) => {
